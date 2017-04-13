@@ -1,5 +1,5 @@
 /*
- * This file is part of the osnmpd distribution (https://github.com/verrio/osnmpd).
+ * This file is part of the osnmpd project (https://github.com/verrio/osnmpd).
  * Copyright (C) 2016 Olivier Verriest
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -178,6 +178,7 @@ static int load_plugins(void)
         }
     }
 
+    regfree(&plugin_reg);
     closedir(dir);
     return 0;
 }

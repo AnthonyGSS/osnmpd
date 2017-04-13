@@ -1,5 +1,5 @@
 #
-# This file is part of the osnmpd distribution (https://github.com/verrio/osnmpd).
+# This file is part of the osnmpd project (https://github.com/verrio/osnmpd).
 # Copyright (C) 2016 Olivier Verriest
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,7 +37,7 @@ AC_CANONICAL_HOST
 
 m4_pattern_allow([AM_PROG_AR])
 if test -z "$CFLAGS"; then
-	CFLAGS="-O2 -fomit-frame-pointer -Wall -Wunreachable-code -Wpointer-arith -Werror"
+	CFLAGS="-Os -fomit-frame-pointer -Wall -Wunreachable-code -Wpointer-arith -Werror"
 fi
 AM_PROG_AR
 AC_PROG_CC
@@ -123,13 +123,29 @@ AC_ARG_WITH(enterprise-oid,
 AC_MSG_RESULT(${ENTERPRISE_MIB})
 AC_DEFINE_UNQUOTED(ENTERPRISE_MIB, [`echo ${ENTERPRISE_MIB} | tr '.' ','`], [Enterprise MIB subtree])
 
-AC_MSG_CHECKING([whether the base MIB is to be compiled in])
-AC_ARG_WITH(mib-base,
-	[  --with-mib-base         Include base MIB module],
-	enable_mib_base=$withval,
-	enable_mib_base=yes)
-AC_MSG_RESULT(${enable_mib_base})
-AM_CONDITIONAL([ENABLE_MIB_BASE], [test "${enable_mib_base}" = "yes"])
+AC_MSG_CHECKING([whether the agent MIB is to be compiled in])
+AC_ARG_WITH(mib-agent,
+	[  --with-mib-agent        Include agent MIB module],
+	enable_mib_agent=$withval,
+	enable_mib_agent=yes)
+AC_MSG_RESULT(${enable_mib_agent})
+AM_CONDITIONAL([ENABLE_MIB_AGENT], [test "${enable_mib_agent}" = "yes"])
+
+AC_MSG_CHECKING([whether the system MIB is to be compiled in])
+AC_ARG_WITH(mib-system,
+	[  --with-mib-system       Include system MIB module],
+	enable_mib_system=$withval,
+	enable_mib_system=yes)
+AC_MSG_RESULT(${enable_mib_system})
+AM_CONDITIONAL([ENABLE_MIB_SYSTEM], [test "${enable_mib_system}" = "yes"])
+
+AC_MSG_CHECKING([whether the power MIB is to be compiled in])
+AC_ARG_WITH(mib-sensors,
+	[  --with-mib-power        Include power MIB module],
+	enable_mib_power=$withval,
+	enable_mib_power=yes)
+AC_MSG_RESULT(${enable_mib_power})
+AM_CONDITIONAL([ENABLE_MIB_POWER], [test "${enable_mib_power}" = "yes"])
 
 AC_MSG_CHECKING([whether the IP MIB is to be compiled in])
 AC_ARG_WITH(mib-ip,
@@ -139,14 +155,6 @@ AC_ARG_WITH(mib-ip,
 AC_MSG_RESULT(${enable_mib_ip})
 AM_CONDITIONAL([ENABLE_MIB_IP], [test "${enable_mib_ip}" = "yes"])
 
-AC_MSG_CHECKING([whether the UCB MIB is to be compiled in])
-AC_ARG_WITH(mib-ucb,
-	[  --with-mib-ucb          Include UCB MIB module],
-	enable_mib_ucb=$withval,
-	enable_mib_ucb=yes)
-AC_MSG_RESULT(${enable_mib_ucb})
-AM_CONDITIONAL([ENABLE_MIB_UCB], [test "${enable_mib_ucb}" = "yes"])
-
 AC_MSG_CHECKING([whether the sensors MIB is to be compiled in])
 AC_ARG_WITH(mib-sensors,
 	[  --with-mib-sensors      Include sensors MIB module],
@@ -155,13 +163,28 @@ AC_ARG_WITH(mib-sensors,
 AC_MSG_RESULT(${enable_mib_sensors})
 AM_CONDITIONAL([ENABLE_MIB_SENSORS], [test "${enable_mib_sensors}" = "yes"])
 
+if test "${enable_mib_sensors}" = "yes"; then
+	AC_CHECK_HEADER([sensors/sensors.h], [], [
+		AC_MSG_ERROR([required lm-sensors header not found])
+	])
+fi
+
 AC_MSG_CHECKING([whether the Java subagent MIB is to be compiled in])
-AC_ARG_WITH(mib-java-subagent,
-	[AS_HELP_STRING([--with-mib-java-subagent],[Include Java subagent MIB module])],
-	enable_mib_java_subagent=$withval,
-	enable_mib_java_subagent=yes)
+AC_ARG_WITH(java-subagent-oid,
+	[AS_HELP_STRING([--with-java-subagent-oid],[Java sub agent OID])],
+	[
+		enable_mib_java_subagent="yes"
+		JAVA_SUB_AGENT_MIB=$withval
+	],
+	[
+		enable_mib_java_subagent="no"
+		JAVA_SUB_AGENT_MIB=""
+	])
 AC_MSG_RESULT(${enable_mib_java_subagent})
 AM_CONDITIONAL([ENABLE_MIB_JAVA_SUBAGENT], [test "${enable_mib_java_subagent}" = "yes"])
+AC_DEFINE_UNQUOTED(JAVA_SUB_AGENT_MIB,
+	[`echo ${JAVA_SUB_AGENT_MIB} | tr '.' ','`], [Java subagent MIB subtree])
+
 
 AS_AC_EXPAND(PLUGIN_DIR,${libdir}/snmp/plugins)
 AC_DEFINE_UNQUOTED(PLUGIN_DIR, "$PLUGIN_DIR", [location of the MIB plugins])
@@ -192,7 +215,10 @@ AC_CONFIG_FILES([
 	src/snmp-core/Makefile
 	src/snmp-agent/Makefile
 	src/snmp-mib/Makefile
-	src/snmp-mib/base/Makefile
+	src/snmp-mib/agent/Makefile
+	src/snmp-mib/system/Makefile
+	src/snmp-mib/power/Makefile
+	src/snmp-mib/sensors/Makefile
 	src/snmp-mib/ip/Makefile
 	src/snmp-mib/java-subagent/Makefile
 	src/tests/Makefile
@@ -209,9 +235,10 @@ AC_MSG_RESULT([max PDU size:              ${MAX_PDU_SIZE}])
 AC_MSG_RESULT([smartcard support:         ${enable_smartcard}])
 AC_MSG_RESULT([serial number support:     ${enable_serial_number}])
 AC_MSG_RESULT([])
-AC_MSG_RESULT([include base MIB:          ${enable_mib_base}])
-AC_MSG_RESULT([include IP MIB:            ${enable_mib_ip}])
-AC_MSG_RESULT([include UCB MIB:           ${enable_mib_ucb}])
-AC_MSG_RESULT([include sensors MIB:       ${enable_mib_sensors}])
-AC_MSG_RESULT([include Java subagent MIB: ${enable_mib_java_subagent}])
+AC_MSG_RESULT([include SNMP agent module:    ${enable_mib_agent}])
+AC_MSG_RESULT([include system module:        ${enable_mib_system}])
+AC_MSG_RESULT([include power module:         ${enable_mib_power}])
+AC_MSG_RESULT([include IP module:            ${enable_mib_ip}])
+AC_MSG_RESULT([include sensors module:       ${enable_mib_sensors}])
+AC_MSG_RESULT([include Java subagent module: ${enable_mib_java_subagent}])
 AC_MSG_RESULT([])
